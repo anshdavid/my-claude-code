@@ -1,47 +1,69 @@
 # CLAUDE.md
 
-This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
+## 1. Plan Node Default
 
-## Purpose
+- Enter plan mode for ANY non-trivial task (3+ steps or architectural decisions)
+- If something goes sideways, STOP and re-plan immediately - don't keep pushing
+- Use plan mode for verification steps, not just building
+- Write detailed specs upfront to reduce ambiguity
 
-This is a personal experiment workspace for testing Claude capabilities and building skills, agents, and workflows. The devcontainer is infrastructure — the real work is whatever experiment is currently being explored.
+## 2. Subagent Strategy
 
-Projects here tend to be exploratory: proofs of concept, capability tests, skill/agent prototypes, and workflow automation.
+Use subagents liberally to keep main context window clean
 
-## Working Style
+- Offload research, exploration, and parallel analysis to subagents
+- For complex problems, throw more compute at it via subagents
+- One tack per subagent for focused execution
 
-This user comes from an engineering background and follows a disciplined process:
+## 3. Self-Improvement Loop
+
+- After ANY correction from the user: update memory with the pattern
+- Write rules for yourself that prevent the same mistake
+- Ruthlessly iterate on these lessons until mistake rate drops
+- Review lessons at session start for relevant project
+
+## 4. Verification Before Done
+
+- Never mark a task complete without proving it works
+- Diff behavior between main and your changes when relevant
+- Ask yourself: "Would a staff engineer approve this?"
+- Run tests, check logs, demonstrate correctness
+
+## 5. Demand Elegance (Balanced)
+
+- For non-trivial changes: pause and ask "is there a more elegant way?"
+- If a fix feels hacky: "Knowing everything I know now, implement the elegant solution"
+- Skip this for simple, obvious fixes - don't over-engineer
+- Challenge your own work before presenting it
+
+## 6. Autonomous Bug Fizing
+
+- When given a bug report: just fix it. Don't ask for hand-holding
+- Point at logs, errors, failing tests - then resolve them
+- Zero context switching required from the user
+- Go fix failing CI tests without being told how
+
+## Task Management
 
 1. **Analyze** — understand the problem fully before touching anything
-2. **Plan** — lay out the approach, identify constraints and tradeoffs
-3. **Refine** — tighten the plan before writing code
+2. **Plan First**: Write plan to tasks/todo.md with checkable items
+3. **Verify Plan**: Check in before starting implementation
 4. **Implement** — execute with precision
+5. **Track Progress**: Mark items complete as you go
+6. **Explain Changes**: High-level summary at each step
+7. **Document Results**: Add review section to 'tasks/todo.md'
+8. **Capture Lessons**: Update `tasks/lessons.md' after corrections
+9. **Simplicity First**: Make every change as simple as possible. Impact minimal code.
+10. **No Laziness**: Find root causes. No temporary fixes. Senior developer standards.
+11. **Minimat Impact**: Changes should only touch what's necessary. Avoid introducing bugs.
+12. **Refine** — tighten the plan before writing code
+
+## Rule Protocol
+
+1. Follow the memory rules at `@.claude/rules/memory-update.md`
+2. Follow the read chunking rules at `@.claude/rules/iterative-read.md`
+3. Follow the iterative write rules at `@.claude/rules/iterative-write.md`
 
 **For Claude:** Match this pace. Front-load understanding. Don't jump to solutions. When asked to build something, lead with analysis and a clear plan. Raise constraints and tradeoffs explicitly rather than quietly making assumptions.
 
-## Memory Protocol
-
-## Follow the memory rules at `@.claude/rules/memory-update.md`
-## Follow the read chunking rules at `@.claude/rules/iterative-read.md`
-## Follow the iterative write rules at `@.claude/rules/iterative-write.md`
-
-## Container Infrastructure
-
-The workspace runs inside a VS Code Dev Container defined in `.devcontainer/`:
-
-- `devcontainer.json` — extensions (Claude Code, ESLint, Prettier, GitLens), volumes, env vars, post-start command
-- `Dockerfile` — `node:20` base with git, zsh, fzf, GitHub CLI, jq, and Claude Code installed globally
-- `init-firewall.sh` — runs at container startup; restricts outbound traffic via `iptables`/`ipset`
-
-**Firewall allowlist** (hardcoded in `init-firewall.sh`):
-
-- GitHub (IP ranges fetched dynamically from `api.github.com/meta`)
-- npm registry (`registry.npmjs.org`)
-- Anthropic APIs (`api.anthropic.com`, `statsig.anthropic.com`, `statsig.us`)
-- Sentry error tracking
-- VS Code services (marketplace, gallery, extension CDN)
-- Local Docker DNS (`127.0.0.11`) and Docker host
-
-To add a new allowed host, add the domain to the appropriate `DOMAINS` array in `init-firewall.sh` and restart the container.
-
-**Key env vars:** `NODE_OPTIONS=--max-old-space-size=4096`, `CLAUDE_CONFIG_DIR=/home/node/.claude`, `DEVCONTAINER=true`
+**Key env vars:** `CLAUDE_CONFIG_DIR=/home/node/.claude`, `DEVCONTAINER=true`
