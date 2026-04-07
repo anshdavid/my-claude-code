@@ -1,0 +1,12 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(wc -l /workspace/.devcontainer/*)",
+      "Bash(du -sh /home/node/.claude/*)",
+      "Bash(find /home/node/.claude/projects -type f -exec ls -lh {} \\\\;)",
+      "Bash(xargs ls:*)",
+      "Bash(grep -r \"hookify\\\\|\\\\.local\\\\.md\" /home/node/.claude/plugins/marketplaces/claude-plugins-official/plugins/hookify/*.md)",
+      "Bash(wc -l /workspace/cobol-migration/.claude/agents/*.md /workspace/cobol-migration/.claude/skills/*.md /workspace/cobol-migration/.claude/plans/*.md)"
+    ]
+  }
+}
