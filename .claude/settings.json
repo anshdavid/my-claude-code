@@ -1,5 +1,8 @@
 {
   "permissions": {
+    "deny": [
+      "Bash(rm:*)"
+    ],
     "allow": [
       "Bash(ls:*)",
       "Bash(mv:*)",
