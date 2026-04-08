@@ -215,6 +215,60 @@ assert_context_contains 42 "TaskCompleted → validation gate context" \
 assert_context 43 "TaskCompleted → hook exits 0 (non-blocking)" \
     "$(task_json 'TaskCompleted' 'Fix bug' '')" "$HOOK_DIR/hook-task.sh"
 
+# ── Tests: write-destination restrictions ─────────────────────────────────────
+
+assert_deny_write() {
+    local num="$1" desc="$2" json="$3"
+    local out
+    out=$(echo "$json" | "$HOOK_DIR/hook-write.sh" 2>/dev/null)
+    if echo "$out" | grep -q '"deny"'; then
+        echo "PASS: [$num] $desc"
+        PASS=$((PASS + 1))
+    else
+        echo "FAIL: [$num] $desc  (expected DENY from write hook)"
+        FAIL=$((FAIL + 1))
+    fi
+}
+
+assert_allow_write() {
+    local num="$1" desc="$2" json="$3"
+    local out
+    out=$(echo "$json" | "$HOOK_DIR/hook-write.sh" 2>/dev/null)
+    if echo "$out" | grep -q '"deny"'; then
+        echo "FAIL: [$num] $desc  (expected ALLOW from write hook, got DENY)"
+        FAIL=$((FAIL + 1))
+    else
+        echo "PASS: [$num] $desc"
+        PASS=$((PASS + 1))
+    fi
+}
+
+echo ""
+echo "=== hook-write.sh: write-destination path checks ==="
+assert_allow_write 44 "/workspace/file.txt → ALLOW" \
+    "$(write_json '/workspace/file.txt' 'content')"
+assert_allow_write 45 "/home/node/.claude/memory/file.md → ALLOW" \
+    "$(write_json '/home/node/.claude/memory/file.md' 'content')"
+assert_allow_write 46 "/tmp/tempfile.txt → ALLOW" \
+    "$(write_json '/tmp/tempfile.txt' 'content')"
+assert_deny_write  47 "/etc/passwd → DENY" \
+    "$(write_json '/etc/passwd' 'content')"
+assert_deny_write  48 "/home/otheruser/file.txt → DENY" \
+    "$(write_json '/home/otheruser/file.txt' 'content')"
+assert_allow_write 49 "relative/output.txt → ALLOW (relative path, no abs check)" \
+    "$(write_json 'relative/output.txt' 'content')"
+
+echo ""
+echo "=== hook-bash.sh: CHECK 3b — write-destination (tee / cp / mv / redirect) ==="
+assert_deny  50 "tee /etc/output → DENY"              "$(bash_json 'tee /etc/output')"
+assert_allow 51 "tee /workspace/output.txt → ALLOW"   "$(bash_json 'tee /workspace/output.txt')"
+assert_allow 52 "tee /tmp/output.txt → ALLOW"         "$(bash_json 'tee /tmp/output.txt')"
+assert_deny  53 "cp src /etc/dest → DENY"             "$(bash_json 'cp /workspace/src /etc/dest')"
+assert_allow 54 "cp src /workspace/dest → ALLOW"      "$(bash_json 'cp /workspace/src /workspace/dest')"
+assert_deny  55 "mv src /etc/dest → DENY"             "$(bash_json 'mv /workspace/src /etc/dest')"
+assert_deny  56 "redirect > /etc/passwd → DENY"       "$(bash_json 'echo test > /etc/passwd')"
+assert_allow 57 "redirect > /workspace/out.txt → ALLOW" "$(bash_json 'echo test > /workspace/out.txt')"
+
 # ── Summary ────────────────────────────────────────────────────────────────────
 
 echo ""

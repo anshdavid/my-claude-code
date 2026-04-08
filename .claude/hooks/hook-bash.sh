@@ -124,6 +124,41 @@ if echo "$COMMAND" | grep -qE '^\s*cd\s+'; then
     fi
 fi
 
+# CHECK 3b: Write-destination restriction for bash write operations (DENY)
+# Covers: tee, cp/mv to absolute dest, output redirection > / >>
+# Only absolute paths are checked; relative paths resolve within CWD (= workspace).
+_BASH_ALLOWED_WRITE_DIRS=("${PROJECT_DIR:-/workspace}" "${CLAUDE_CONFIG_DIR:-/home/node/.claude}" "/tmp")
+
+_is_allowed_bash_write() {
+    local target="$1"
+    for d in "${_BASH_ALLOWED_WRITE_DIRS[@]}"; do
+        [[ "$target" == "$d" || "$target" == "$d/"* ]] && return 0
+    done
+    return 1
+}
+
+# tee writes to its file argument(s)
+if echo "$COMMAND" | grep -qE '^\s*tee\b'; then
+    WRITE_DEST=$(echo "$COMMAND" | grep -oE '/[^ >]+' | tail -1)
+    if [[ -n "$WRITE_DEST" ]] && ! _is_allowed_bash_write "$WRITE_DEST"; then
+        emit_deny "BLOCKED: tee destination [$WRITE_DEST] is outside allowed write directories. Permitted roots: ${_BASH_ALLOWED_WRITE_DIRS[*]}. Command: [$COMMAND]"
+    fi
+fi
+
+# cp / mv — last absolute path argument is the destination
+if echo "$COMMAND" | grep -qE '^\s*(cp|mv)\b'; then
+    WRITE_DEST=$(echo "$COMMAND" | grep -oE '/[^ ]+' | tail -1)
+    if [[ -n "$WRITE_DEST" ]] && ! _is_allowed_bash_write "$WRITE_DEST"; then
+        emit_deny "BLOCKED: cp/mv destination [$WRITE_DEST] is outside allowed write directories. Permitted roots: ${_BASH_ALLOWED_WRITE_DIRS[*]}. Command: [$COMMAND]"
+    fi
+fi
+
+# Output redirection > or >> to an absolute path (scan STRIPPED after quote removal)
+REDIR_DEST=$(echo "$STRIPPED" | grep -oE '>>?\s+/[^ ]+' | grep -oE '/[^ ]+' | tail -1)
+if [[ -n "$REDIR_DEST" ]] && ! _is_allowed_bash_write "$REDIR_DEST"; then
+    emit_deny "BLOCKED: Output redirect target [$REDIR_DEST] is outside allowed write directories. Permitted roots: ${_BASH_ALLOWED_WRITE_DIRS[*]}. Command: [$COMMAND]"
+fi
+
 # CHECK 4: Risky but recoverable commands (WARN via context)
 if echo "$COMMAND" | grep -qiE 'DROP\s+TABLE|TRUNCATE\s+TABLE|DELETE\s+FROM\s+\w+\s*;|chmod\s+-R\s+777'; then
     emit_context "RISKY COMMAND WARNING: This command is potentially destructive but recoverable. Confirm it is intentional, authorized, and reversible before proceeding. Command: [$COMMAND]"

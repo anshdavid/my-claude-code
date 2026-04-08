@@ -10,6 +10,36 @@ CONTENT=$(echo "$INPUT" | jq -r '.tool_input.content // ""')
 LOG="${CLAUDE_PROJECT_DIR:-$(echo "$INPUT" | jq -r '.cwd // "."')}/logs/hook-write.log"
 mkdir -p "$(dirname "$LOG")"
 
+# Path restriction helpers
+PROJECT_DIR="${CLAUDE_PROJECT_DIR:-$(echo "$INPUT" | jq -r '.cwd // "/workspace"')}"
+CLAUDE_HOME="${CLAUDE_CONFIG_DIR:-/home/node/.claude}"
+
+emit_deny() {
+    local reason="$1"
+    echo "$(date): DENY -- file=[$FILE_PATH] reason=[$reason]" >> "$LOG"
+    jq -n --arg reason "$reason" '{
+        hookSpecificOutput: {
+            hookEventName: "PreToolUse",
+            permissionDecision: "deny",
+            permissionDecisionReason: $reason
+        }
+    }'
+    exit 0
+}
+
+is_allowed_write_target() {
+    local target="$1"
+    for allowed in "$PROJECT_DIR" "$CLAUDE_HOME" "/tmp"; do
+        [[ "$target" == "$allowed" || "$target" == "$allowed/"* ]] && return 0
+    done
+    return 1
+}
+
+# CHECK: Write destination must be within allowed directories (absolute paths only)
+if [[ "$FILE_PATH" == "/"* ]] && ! is_allowed_write_target "$FILE_PATH"; then
+    emit_deny "BLOCKED: Write target [$FILE_PATH] is outside allowed directories. Permitted roots: [$PROJECT_DIR], [$CLAUDE_HOME], [/tmp]."
+fi
+
 LINE_COUNT=$(echo "$CONTENT" | wc -l)
 echo "$(date): WRITE -- file=[$FILE_PATH] lines=$LINE_COUNT" >> "$LOG"
 

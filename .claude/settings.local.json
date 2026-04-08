@@ -6,7 +6,11 @@
       "Bash(find /home/node/.claude/projects -type f -exec ls -lh {} \\\\;)",
       "Bash(xargs ls:*)",
       "Bash(grep -r \"hookify\\\\|\\\\.local\\\\.md\" /home/node/.claude/plugins/marketplaces/claude-plugins-official/plugins/hookify/*.md)",
-      "Bash(wc -l /workspace/cobol-migration/.claude/agents/*.md /workspace/cobol-migration/.claude/skills/*.md /workspace/cobol-migration/.claude/plans/*.md)"
+      "Bash(wc -l /workspace/cobol-migration/.claude/agents/*.md /workspace/cobol-migration/.claude/skills/*.md /workspace/cobol-migration/.claude/plans/*.md)",
+      "Bash(bash:*)",
+      "Bash(chmod +x:*)",
+      "Bash(file:*)",
+      "Bash(/workspace/.claude/hooks/tests/run-tests.sh:*)"
     ]
   }
 }

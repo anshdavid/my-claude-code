@@ -8,6 +8,7 @@
       "Bash(mkdir:*)",
       "Bash(xargs:*)",
       "Bash(echo:*)",
+      "Bash(bash:*)",
       "Read",
       "Write",
       "Edit",
