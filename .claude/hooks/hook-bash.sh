@@ -1,8 +1,9 @@
 #!/usr/bin/env bash
 # hook-bash.sh -- PreToolUse: Bash hook
 # Safety guard for Bash commands:
-# CHECK 0:  All rm commands (DENY)
-# CHECK 0b: All git commands (DENY)
+# CHECK 0:  All rm commands (DENY) — direct, sudo, xargs, find -exec, env
+# CHECK 0b: All git commands (DENY) — direct, sudo, xargs, env
+# CHECK 0c: Shell execution wrappers (DENY) — bash -c, sh -c, eval, exec
 # CHECK 1:  Catastrophic filesystem wipe — mkfs, dd (DENY)
 # CHECK 2:  Compound command detection (DENY)
 # CHECK 3:  CWD escape via cd (DENY)
@@ -45,13 +46,28 @@ emit_context() {
 }
 
 # CHECK 0: Block all rm commands (DENY)
-if echo "$COMMAND" | grep -qE '^\s*rm\b'; then
-    emit_deny "BLOCKED: rm is not allowed. To delete tracked files use 'git rm'; for other files ask the user to remove them manually. Command: [$COMMAND]"
+# Catches: rm, sudo rm, xargs rm, find -exec rm, env rm
+if echo "$COMMAND" | grep -qE '(^\s*rm\b|^\s*sudo\s+.*\brm\b|\bxargs\s+.*\brm\b|\bfind\b.*-exec\s+rm\b|^\s*env\s+.*\brm\b)'; then
+    emit_deny "BLOCKED: rm is not allowed. Ask the user to remove files manually. Command: [$COMMAND]"
 fi
 
 # CHECK 0b: Block all git commands (DENY)
-if echo "$COMMAND" | grep -qE '^\s*git\b'; then
+# Catches: git, sudo git, xargs git, env git
+if echo "$COMMAND" | grep -qE '(^\s*git\b|^\s*sudo\s+.*\bgit\b|\bxargs\s+.*\bgit\b|^\s*env\s+.*\bgit\b)'; then
     emit_deny "BLOCKED: git commands are not allowed. All version control operations must be performed manually by the user. Command: [$COMMAND]"
+fi
+
+# CHECK 0c: Block shell execution wrappers (DENY)
+# These wrap arbitrary commands and bypass quote-stripping analysis.
+# bash -c "rm file" → after stripping quotes, rm is invisible to later checks.
+if echo "$COMMAND" | grep -qE '^\s*(bash|sh|zsh|dash)\s+.*-c\b'; then
+    emit_deny "BLOCKED: Shell execution wrappers (bash -c, sh -c, etc.) are not allowed as they bypass safety checks. Run commands directly instead. Command: [$COMMAND]"
+fi
+if echo "$COMMAND" | grep -qE '^\s*eval\b'; then
+    emit_deny "BLOCKED: eval is not allowed as it bypasses safety checks. Run commands directly instead. Command: [$COMMAND]"
+fi
+if echo "$COMMAND" | grep -qE '^\s*exec\b'; then
+    emit_deny "BLOCKED: exec is not allowed as it bypasses safety checks. Run commands directly instead. Command: [$COMMAND]"
 fi
 
 # CHECK 1: Catastrophic filesystem wipe (DENY)
