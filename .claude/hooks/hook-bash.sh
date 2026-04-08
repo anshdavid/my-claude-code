@@ -1,10 +1,12 @@
 #!/usr/bin/env bash
 # hook-bash.sh -- PreToolUse: Bash hook
 # Safety guard for Bash commands:
-# CHECK 1: Catastrophic destructive commands (DENY)
-# CHECK 2: Compound command detection (DENY)
-# CHECK 3: CWD escape via cd (DENY)
-# CHECK 4: Risky but recoverable commands (WARN via context)
+# CHECK 0:  All rm commands (DENY)
+# CHECK 0b: All git commands (DENY)
+# CHECK 1:  Catastrophic filesystem wipe — mkfs, dd (DENY)
+# CHECK 2:  Compound command detection (DENY)
+# CHECK 3:  CWD escape via cd (DENY)
+# CHECK 4:  Risky but recoverable — SQL, chmod 777 (WARN via context)
 
 INPUT=$(cat)
 EVENT_NAME=$(echo "$INPUT" | jq -r '.hook_event_name // "PreToolUse"')
@@ -20,9 +22,11 @@ emit_deny() {
     local reason="$1"
     echo "$(date): DENY -- cmd=[$COMMAND] reason=[$reason]" >> "$LOG"
     jq -n --arg reason "$reason" '{
-        hookEventName: "PreToolUse",
-        permissionDecision: "deny",
-        permissionDecisionReason: $reason
+        hookSpecificOutput: {
+            hookEventName: "PreToolUse",
+            permissionDecision: "deny",
+            permissionDecisionReason: $reason
+        }
     }'
     exit 0
 }
@@ -32,14 +36,26 @@ emit_context() {
     local ctx="$1"
     echo "$(date): WARN -- cmd=[$COMMAND]" >> "$LOG"
     jq -n --arg ctx "$ctx" '{
-        hookEventName: "PreToolUse",
-        additionalContext: $ctx
+        hookSpecificOutput: {
+            hookEventName: "PreToolUse",
+            additionalContext: $ctx
+        }
     }'
     exit 0
 }
 
-# CHECK 1: Catastrophic destructive commands (DENY)
-if echo "$COMMAND" | grep -qiE '\brm\s+-rf\s+/($|[^-a-z])|rm\s+-rf\s+/\*|rm\s+--no-preserve-root|mkfs\.|dd\s+if=.+of=/dev/[sh]d[a-z](\s|$|\*).*'; then
+# CHECK 0: Block all rm commands (DENY)
+if echo "$COMMAND" | grep -qE '^\s*rm\b'; then
+    emit_deny "BLOCKED: rm is not allowed. To delete tracked files use 'git rm'; for other files ask the user to remove them manually. Command: [$COMMAND]"
+fi
+
+# CHECK 0b: Block all git commands (DENY)
+if echo "$COMMAND" | grep -qE '^\s*git\b'; then
+    emit_deny "BLOCKED: git commands are not allowed. All version control operations must be performed manually by the user. Command: [$COMMAND]"
+fi
+
+# CHECK 1: Catastrophic filesystem wipe (DENY)
+if echo "$COMMAND" | grep -qiE 'mkfs\.|dd\s+if=.+of=/dev/[sh]d[a-z](\s|$|\*).*'; then
     emit_deny "BLOCKED: Catastrophically destructive command detected. Command: [$COMMAND]. A Saiyan fights WITH PRECISION, not annihilation."
 fi
 
@@ -93,7 +109,7 @@ if echo "$COMMAND" | grep -qE '^\s*cd\s+'; then
 fi
 
 # CHECK 4: Risky but recoverable commands (WARN via context)
-if echo "$COMMAND" | grep -qiE '\bgit\s+push\s+.*--force|git\s+reset\s+--hard|git\s+clean\s+-f|git\s+branch\s+-[Dd]\s+.*|DROP\s+TABLE|TRUNCATE\s+TABLE|DELETE\s+FROM\s+\w+\s*;|chmod\s+-R\s+777'; then
+if echo "$COMMAND" | grep -qiE 'DROP\s+TABLE|TRUNCATE\s+TABLE|DELETE\s+FROM\s+\w+\s*;|chmod\s+-R\s+777'; then
     emit_context "RISKY COMMAND WARNING: This command is potentially destructive but recoverable. Confirm it is intentional, authorized, and reversible before proceeding. Command: [$COMMAND]"
 fi
 
