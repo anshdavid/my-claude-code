@@ -1,8 +1,6 @@
 {
   "permissions": {
-    "deny": [
-      "Bash(rm:*)"
-    ],
+    "deny": ["Bash(rm:*)"],
     "allow": [
       "Bash(ls:*)",
       "Bash(mv:*)",
@@ -21,10 +19,10 @@
     ]
   },
   "env": {
-    "DISABLE_PROMPT_CACHING": 0,
-    "CLAUDE_CODE_DISABLE_EXPERIMENTAL_BETAS": 1,
-    "CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS": 1,
-    "CLAUDE_CODE_NO_FLICKER": 1
+    "DISABLE_PROMPT_CACHING": "0",
+    "CLAUDE_CODE_DISABLE_EXPERIMENTAL_BETAS": "1",
+    "CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS": "1",
+    "CLAUDE_CODE_NO_FLICKER": "1"
   },
   "hooks": {
     "PreToolUse": [

@@ -9,7 +9,7 @@ After completing any meaningful task, evaluate is there anything here worth reme
 
 If yes:
 
-- Save it to `@.claude/agent-memory`
+- Save it to `.claude/agent-memory/{agent|main_agent|[subagent_name]}/`
 - Do not rely on re-discovery later
 
 Best Practices:
