@@ -14,6 +14,8 @@ This rule builds on top of the other operational rule guides
 
 Unified guide for decomposing work into tracked tasks and composing multi-layer workflows (agent, skill, reference) into a single dependency-ordered task list. Covers planning and breakdown, dynamic adaptation, task validation and lifecycle, and workflow layer merging.
 
+When source input or output is large, coordinate with `iterative-processing` rule to structure execution tasks as read→process→write triplets, one per chunk.
+
 ## Planning and breakdown
 
 1. Identify deliverables: What concrete outputs are expected?
